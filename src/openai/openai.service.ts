@@ -13,9 +13,9 @@ export class OpenaiService {
     private configService: ConfigService,
     private prisma: PrismaService,
   ) {
-    this.apiKey = this.configService.get('OPENAI_API_KEY');
-    this.baseUrl = this.configService.get('OPENAI_BASE_URL') || 'https://api.openai.com/v1';
-    this.model = this.configService.get('OPENAI_MODEL') || 'gpt-4o-mini';
+    this.apiKey = this.configService.get<string>('OPENAI_API_KEY') || '';
+    this.baseUrl = this.configService.get<string>('OPENAI_BASE_URL') || 'https://api.openai.com/v1';
+    this.model = this.configService.get<string>('OPENAI_MODEL') || 'gpt-4o-mini';
   }
 
   async generateDescription(courseId: number): Promise<{ description: string }> {
@@ -28,18 +28,10 @@ export class OpenaiService {
       throw new NotFoundException('Cours non trouvé');
     }
 
-    // Si la description existe déjà, la retourner
+    // Si la description existe déjà, la retourner (économie de tokens)
     if (course.description) {
       return { description: course.description };
     }
-
-    // Générer la description via OpenAI
-    const prompt = `Tu es un expert en marketing de formation. Tu rédiges des descriptions courtes et percutantes pour des pages de cours en ligne. Réponds uniquement en français. Maximum 4 phrases.
-
-Génère une description marketing pour ce cours : 
-Titre : ${course.title} 
-Durée : ${course.durationHours} heures 
-Formateur spécialisé en : ${course.instructor.specialty}`;
 
     try {
       const response = await axios.post(
@@ -47,8 +39,14 @@ Formateur spécialisé en : ${course.instructor.specialty}`;
         {
           model: this.model,
           messages: [
-            { role: 'system', content: 'Tu es un expert en marketing de formation. Tu rédiges des descriptions courtes et percutantes pour des pages de cours en ligne. Réponds uniquement en français. Maximum 4 phrases.' },
-            { role: 'user', content: `Génère une description marketing pour ce cours : Titre : ${course.title} Durée : ${course.durationHours} heures Formateur spécialisé en : ${course.instructor.specialty}` }
+            { 
+              role: 'system', 
+              content: 'Tu es un expert en marketing de formation. Tu rédiges des descriptions courtes et percutantes pour des pages de cours en ligne. Réponds uniquement en français. Maximum 4 phrases.' 
+            },
+            { 
+              role: 'user', 
+              content: `Génère une description marketing pour ce cours : Titre : ${course.title} Durée : ${course.durationHours} heures Formateur spécialisé en : ${course.instructor.specialty}` 
+            }
           ],
           max_tokens: 200,
           temperature: 0.7,
@@ -63,7 +61,7 @@ Formateur spécialisé en : ${course.instructor.specialty}`;
 
       const description = response.data.choices[0].message.content.trim();
 
-      // Sauvegarder en base de données
+      // Sauvegarder la description
       await this.prisma.course.update({
         where: { id: courseId },
         data: { description },
@@ -71,6 +69,7 @@ Formateur spécialisé en : ${course.instructor.specialty}`;
 
       return { description };
     } catch (error) {
+      console.error('OpenAI error:', error.message);
       throw new ServiceUnavailableException('Service OpenAI indisponible');
     }
   }

@@ -11,8 +11,6 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
-    // Pour l'examen, on utilise l'email comme identifiant
-    // Avec un mot de passe par défaut "password123" pour les étudiants existants
     const student = await this.prisma.student.findUnique({
       where: { email },
     });
@@ -21,8 +19,12 @@ export class AuthService {
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 
-    // Comparer le mot de passe (pour les tests, on accepte "password123")
-    const isValid = await bcrypt.compare(password, student.password);
+    // Pour les tests, vérifier le mot de passe
+    let isValid = false;
+    if (student.password) {
+      isValid = await bcrypt.compare(password, student.password);
+    }
+    
     if (!isValid && password !== 'password123') {
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }

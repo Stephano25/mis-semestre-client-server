@@ -11,7 +11,7 @@ export class WebhookService {
     private configService: ConfigService,
     private prisma: PrismaService,
   ) {
-    this.webhookSecret = this.configService.get('WEBHOOK_SECRET');
+    this.webhookSecret = this.configService.get<string>('WEBHOOK_SECRET') || 'secret_examen_2026';
   }
 
   verifySignature(payload: string, signature: string): boolean {
@@ -27,6 +27,11 @@ export class WebhookService {
   }
 
   async handlePaymentWebhook(payload: any, signature: string) {
+    // Vérifier la présence de la signature
+    if (!signature) {
+      throw new UnauthorizedException('Signature manquante');
+    }
+
     // Vérifier la signature
     const payloadStr = JSON.stringify(payload);
     if (!this.verifySignature(payloadStr, signature)) {

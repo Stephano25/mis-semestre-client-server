@@ -4,11 +4,15 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Nettoyer la base de données
+  console.log('🌱 Début du seeding...');
+
+  // Nettoyer la base de données dans le bon ordre (respecter les foreign keys)
   await prisma.enrollment.deleteMany();
   await prisma.course.deleteMany();
   await prisma.instructor.deleteMany();
   await prisma.student.deleteMany();
+
+  console.log('✓ Base nettoyée');
 
   // Créer les formateurs
   const instructors = await Promise.all([
@@ -34,6 +38,8 @@ async function main() {
       },
     }),
   ]);
+
+  console.log(`✓ ${instructors.length} formateurs créés`);
 
   // Créer les cours
   const courses = await Promise.all([
@@ -79,6 +85,8 @@ async function main() {
     }),
   ]);
 
+  console.log(`✓ ${courses.length} cours créés`);
+
   // Créer les étudiants
   const hashedPassword = await bcrypt.hash('password123', 10);
   const students = await Promise.all([
@@ -88,6 +96,7 @@ async function main() {
         email: 'alice@email.com',
         phone: '0612345678',
         password: hashedPassword,
+        enrolledAt: new Date(),
       },
     }),
     prisma.student.create({
@@ -96,6 +105,7 @@ async function main() {
         email: 'bob@email.com',
         phone: '0623456789',
         password: hashedPassword,
+        enrolledAt: new Date(),
       },
     }),
     prisma.student.create({
@@ -104,6 +114,7 @@ async function main() {
         email: 'claire@email.com',
         phone: '0634567890',
         password: hashedPassword,
+        enrolledAt: new Date(),
       },
     }),
     prisma.student.create({
@@ -112,9 +123,12 @@ async function main() {
         email: 'david@email.com',
         phone: '0645678901',
         password: hashedPassword,
+        enrolledAt: new Date(),
       },
     }),
   ]);
+
+  console.log(`✓ ${students.length} étudiants créés`);
 
   // Créer les inscriptions
   await Promise.all([
@@ -168,13 +182,17 @@ async function main() {
     }),
   ]);
 
-  console.log('Base de données initialisée avec succès !');
-  console.log('Étudiants créés :', students.map(s => ({ email: s.email, password: 'password123' })));
+  console.log('✓ 6 inscriptions créées');
+  console.log('🎉 Seeding terminé avec succès !');
+  console.log('\n📝 Informations de connexion :');
+  students.forEach(s => {
+    console.log(`   - ${s.email} / password123`);
+  });
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('❌ Erreur lors du seeding:', e);
     process.exit(1);
   })
   .finally(async () => {
