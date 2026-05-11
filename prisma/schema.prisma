@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id         Int       @id @default(autoincrement())
+  name       String
+  email      String    @unique
+  phone      String
+  enrolledAt DateTime  @default(now()) @map("enrolled_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  enrollments Enrollment[]
+  password   String    // pour l'auth
+
+  @@map("students")
+}
+
+model Instructor {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  specialty String
+  createdAt DateTime  @default(now()) @map("created_at")
+  courses   Course[]
+
+  @@map("instructors")
+}
+
+model Course {
+  id            Int       @id @default(autoincrement())
+  title         String
+  description   String?   // description générée par OpenAI
+  price         Float
+  durationHours Int       @map("duration_hours")
+  instructorId  Int       @map("instructor_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  instructor    Instructor @relation(fields: [instructorId], references: [id])
+  enrollments   Enrollment[]
+
+  @@map("courses")
+}
+
+model Enrollment {
+  id            Int       @id @default(autoincrement())
+  studentId     Int       @map("student_id")
+  courseId      Int       @map("course_id")
+  status        String    @default("pending") // pending, active, completed
+  paymentStatus String    @default("unpaid") @map("payment_status") // unpaid, paid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  student       Student   @relation(fields: [studentId], references: [id])
+  course        Course    @relation(fields: [courseId], references: [id])
+
+  @@unique([studentId, courseId])
+  @@map("enrollments")
+}
