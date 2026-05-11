@@ -12,7 +12,8 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
   }));
   
-  app.setGlobalPrefix('api');
+  // Supprimer cette ligne ou la modifier
+  // app.setGlobalPrefix('api');  // <-- À COMMENTER ou SUPPRIMER
   
   // Configuration Swagger
   const config = new DocumentBuilder()
