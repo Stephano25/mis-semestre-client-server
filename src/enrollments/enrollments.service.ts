@@ -7,51 +7,53 @@ export class EnrollmentsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createEnrollmentDto: CreateEnrollmentDto) {
-    const { student_id, course_id } = createEnrollmentDto;
+  // Convertir en nombres si nécessaire
+  const student_id = Number(createEnrollmentDto.student_id);
+  const course_id = Number(createEnrollmentDto.course_id);
 
-    // Vérifier si l'étudiant existe
-    const student = await this.prisma.student.findUnique({
-      where: { id: student_id },
-    });
-    if (!student) {
-      throw new NotFoundException('Étudiant non trouvé');
-    }
+  // Vérifier si l'étudiant existe
+  const student = await this.prisma.student.findUnique({
+    where: { id: student_id },
+  });
+  if (!student) {
+    throw new NotFoundException('Étudiant non trouvé');
+  }
 
-    // Vérifier si le cours existe
-    const course = await this.prisma.course.findUnique({
-      where: { id: course_id },
-    });
-    if (!course) {
-      throw new NotFoundException('Cours non trouvé');
-    }
+  // Vérifier si le cours existe
+  const course = await this.prisma.course.findUnique({
+    where: { id: course_id },
+  });
+  if (!course) {
+    throw new NotFoundException('Cours non trouvé');
+  }
 
-    // Vérifier si déjà inscrit
-    const existing = await this.prisma.enrollment.findUnique({
-      where: {
-        studentId_courseId: {
-          studentId: student_id,
-          courseId: course_id,
-        },
-      },
-    });
-    if (existing) {
-      throw new ConflictException('Étudiant déjà inscrit à ce cours');
-    }
-
-    const enrollment = await this.prisma.enrollment.create({
-      data: {
+  // Vérifier si déjà inscrit
+  const existing = await this.prisma.enrollment.findUnique({
+    where: {
+      studentId_courseId: {
         studentId: student_id,
         courseId: course_id,
-        status: 'pending',
-        paymentStatus: 'unpaid',
       },
-      include: {
-        student: true,
-        course: true,
-      },
-    });
+    },
+  });
+  if (existing) {
+    throw new ConflictException('Étudiant déjà inscrit à ce cours');
+  }
 
-    return { success: true, data: enrollment };
+  const enrollment = await this.prisma.enrollment.create({
+    data: {
+      studentId: student_id,
+      courseId: course_id,
+      status: 'pending',
+      paymentStatus: 'unpaid',
+    },
+    include: {
+      student: true,
+      course: true,
+    },
+  });
+
+  return { success: true, data: enrollment };
   }
 
   async complete(id: number) {

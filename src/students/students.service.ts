@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto, UpdateStudentDto, StudentQueryDto } from './dto/student.dto';
 import * as bcrypt from 'bcrypt';
@@ -8,12 +8,13 @@ export class StudentsService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(query: StudentQueryDto) {
-    const { page = 1, per_page = 15, name } = query;
+    const page = Number(query.page) || 1;
+    const per_page = Number(query.per_page) || 15;
     const skip = (page - 1) * per_page;
 
     const where: any = {};
-    if (name) {
-      where.name = { contains: name };
+    if (query.name) {
+      where.name = { contains: query.name };
     }
 
     const [students, total] = await Promise.all([
@@ -31,7 +32,7 @@ export class StudentsService {
       total,
       current_page: page,
       last_page: Math.ceil(total / per_page),
-      per_page,
+      per_page: per_page,
     };
   }
 
@@ -86,7 +87,29 @@ export class StudentsService {
   }
 
   async remove(id: number) {
-    await this.findOne(id);
-    await this.prisma.student.delete({ where: { id } });
+    // 1. Vérifier si l'étudiant existe
+    const student = await this.prisma.student.findUnique({
+      where: { id },
+      include: {
+        enrollments: true,
+      },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Étudiant non trouvé');
+    }
+
+    // 2. Supprimer TOUTES les inscriptions de l'étudiant
+    if (student.enrollments.length > 0) {
+      console.log(`Suppression de ${student.enrollments.length} inscription(s) pour l'étudiant ${id}`);
+      await this.prisma.enrollment.deleteMany({
+        where: { studentId: id },
+      });
+    }
+
+    // 3. Maintenant supprimer l'étudiant
+    await this.prisma.student.delete({
+      where: { id },
+    });
   }
 }

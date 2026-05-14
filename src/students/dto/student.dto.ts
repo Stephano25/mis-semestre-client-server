@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength, IsInt, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateStudentDto {
   @ApiProperty()
@@ -33,13 +34,19 @@ export class UpdateStudentDto {
 }
 
 export class StudentQueryDto {
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, default: 1 })
   @IsOptional()
-  page?: number;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, default: 15 })
   @IsOptional()
-  per_page?: number;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  per_page?: number = 15;
 
   @ApiProperty({ required: false })
   @IsOptional()
